@@ -2,86 +2,170 @@
 
 ## 🌟 Overview
 
-A Model Context Protocol (MCP) server that integrates with BuiltWith's technology detection API. This server allows AI assistants to identify the technology stack behind any website, providing detailed information about frameworks, analytics tools, hosting services, and more - all through natural language commands.
+**BuiltWith MCP** is a Model Context Protocol (MCP) server that allows AI assistants (Claude, Cursor, IDE agents, etc.) to query BuiltWith’s technology detection data **directly and natively**.
 
-## 🛠️ Features
+It enables natural-language questions like:
 
--   🌐 **Domain Lookup**: Get comprehensive technology profiles for any website
+> “What technologies does example.com use?”
+> “Does this site run Shopify or Magento?”
+> “What analytics stack is used by nytimes.com?”
 
+BuiltWith MCP supports **bring-your-own BuiltWith API key** and can be used either as a **hosted service** or **self-hosted**.
 
-## 📦 Installation
+---
 
-```bash
-# Clone the repository
-git clone https://github.com/builtwith/mcp.git
+## 🌐 Hosted MCP (Recommended)
 
-# Navigate to directory
-cd mcp
+BuiltWith provides a **hosted MCP endpoint** — no local Node process required.
 
-# Install dependencies
-npm install
-
+### Endpoint
 
 ```
+https://api.builtwith.com/mcp
+```
 
-## ⚙️ Configuration
+### Authentication
 
-The BuiltWith MCP Server requires an API key from [BuiltWith](https://api.builtwith.com/). Configure the server with your API key as follows:
+Bring your own BuiltWith API key:
+
+```
+Authorization: Bearer YOUR_BUILTWITH_API_KEY
+```
+
+### Example MCP request
 
 ```json
 {
-    "mcpServers": {
-        "builtwith": {
-            "command": "node",
-            "args": ["[PATH-TO]/bw-mcp-v1.js"],
-            "env": {
-                "BUILTWITH_API_KEY": "[YOUR-API-KEY]"
-            }
-        }
-    }
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list"
 }
-
 ```
 
-### Configuration Locations
+---
 
--   **Claude Desktop**: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
--   **VS Code (Cursor/Claude Dev)**: `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` (macOS) or `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json` (Windows)
+## 🧩 Supported Tools
 
-## 🚀 Usage
+The hosted MCP exposes the following tools:
 
-Once configured, you can use the BuiltWith MCP Server with any MCP-compatible AI assistant. Here are some examples of what you can ask:
+* `domain-lookup` – Live technology detection for a domain
+* `domain-api` – Full domain metadata
+* `relationships-api` – Related websites
+* `free-api` – Category and group counts
+* `company-to-url` – Company → domain discovery
+* `tags-api` – IP / attribute based discovery
+* `recommendations-api` – Technology recommendations
+* `redirects-api` – Live and historical redirects
+* `keywords-api` – Keyword intelligence
+* `trends-api` – Technology trend data
+* `product-api` – Ecommerce product search
+* `trust-api` – Trust scoring
+* `financial-api` – Financial data
+* `social-api` – Social profile associations
 
--   "What technologies is example.com using?"
--   "What CMS does nytimes.com run on?"
--   "Does amazon.com use Google Analytics?"
--   "What JavaScript frameworks are used by spotify.com?"
--   "What hosting provider does netflix.com use?"
--   "Compare the technology stacks of facebook.com and twitter.com"
+---
 
-## 🧩 How It Works
+## ⚙️ Client Configuration (Claude, Cursor, IDEs)
 
-The BuiltWith MCP Server acts as a bridge between AI assistants and the BuiltWith API:
+Add BuiltWith MCP to your MCP-compatible client configuration.
 
-1.  🗣️ The AI assistant receives a user query about website technologies
-2.  🔌 The assistant connects to the BuiltWith MCP Server
-3.  🔍 The server makes appropriate API calls to BuiltWith
-4.  📊 Technology data is retrieved and formatted
-5.  💬 The AI assistant provides human-friendly insights based on the data
+### Example
 
-## 📖 API Documentation
+```json
+{
+  "mcpServers": {
+    "builtwith": {
+      "url": "https://api.builtwith.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_BUILTWITH_API_KEY"
+      }
+    }
+  }
+}
+```
 
-For more information about the BuiltWith API, visit:
+### Configuration locations
 
--   [BuiltWith API Documentation](https://api.builtwith.com/)
--   [BuiltWith Domain API](https://api.builtwith.com/domain-api)
+* **Claude Desktop**
 
+  * macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+  * Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+* **Cursor / Claude Dev (VS Code)**
 
+  * macOS: `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+  * Windows: `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+
+---
+
+## 🛠️ Self-Hosting (Optional)
+
+You can also run the BuiltWith MCP server locally or inside your own infrastructure.
+
+### Installation
+
+```bash
+git clone https://github.com/builtwith/mcp.git
+cd mcp
+npm install
+```
+
+### Local (stdio) MCP configuration
+
+```json
+{
+  "mcpServers": {
+    "builtwith": {
+      "command": "node",
+      "args": ["[PATH-TO]/bw-mcp-v1.js"],
+      "env": {
+        "BUILTWITH_API_KEY": "YOUR_BUILTWITH_API_KEY"
+      }
+    }
+  }
+}
+```
+
+> Note: The hosted endpoint is recommended for most users. Self-hosting is useful if you need custom routing, rate-limiting, or private network access.
+
+---
+
+## 🚀 Usage Examples
+
+Once configured, try asking your AI assistant:
+
+* “What technologies is example.com using?”
+* “What CMS does nytimes.com run on?”
+* “Does amazon.com use Google Analytics?”
+* “What JavaScript frameworks are used by spotify.com?”
+* “What hosting provider does netflix.com use?”
+* “Compare the technology stacks of facebook.com and twitter.com”
+
+---
+
+## 🧠 How It Works
+
+1. 🗣️ User asks a technology question in an AI assistant
+2. 🔌 The assistant calls the BuiltWith MCP server
+3. 🔍 MCP translates intent into BuiltWith API calls
+4. 📊 BuiltWith returns structured technology data
+5. 💬 The AI assistant presents human-friendly insights
+
+---
+
+## 📖 BuiltWith API Documentation
+
+* [https://api.builtwith.com/](https://api.builtwith.com/)
+* [https://api.builtwith.com/domain-api](https://api.builtwith.com/domain-api)
+
+---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License — see the LICENSE file for details.
 
-----------
+---
 
-<p align="center">Made with ❤️ for the AI community</p>
+
+Built for AI-native workflows by <a href="https://builtwith.com">BuiltWith</a>
+
+Just say which.
