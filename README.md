@@ -16,6 +16,8 @@ BuiltWith MCP supports **bring-your-own BuiltWith API key** and can be used eith
 
 ## Claude DEMO
 
+Shows how to get this working in Claude as a Connector 
+
 https://github.com/user-attachments/assets/1199362a-c813-497e-8569-15b9a3ce9713
 
 ## 🌐 Hosted MCP (Recommended)
