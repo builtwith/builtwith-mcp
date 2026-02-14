@@ -1,7 +1,33 @@
 {
-    "type": "module",
-    "dependencies": {
-        "@modelcontextprotocol/sdk": "^1.7.0",
-        "zod": "^3.24.4"
-    }
+  "name": "@builtwith/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for BuiltWith API integration",
+  "type": "module",
+  "main": "bw-mcp-v1.js",
+  "bin": {
+    "builtwith-mcp": "./bw-mcp-v1.js"
+  },
+  "keywords": [
+    "mcp",
+    "builtwith",
+    "model-context-protocol",
+    "api"
+  ],
+  "author": "Gary Brewer <gary@builtwith.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/builtwith/mcp-server.git"
+  },
+  "homepage": "https://github.com/builtwith/mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/builtwith/mcp-server/issues"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.7.0",
+    "zod": "^3.24.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
