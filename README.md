@@ -107,11 +107,18 @@ Add BuiltWith MCP to your MCP-compatible client configuration.
 
 You can also run the BuiltWith MCP server locally or inside your own infrastructure.
 
+### What changed (February 14, 2026)
+
+The local server now supports both standard MCP transports:
+
+* `stdio` (default) for local MCP clients like Claude Desktop/Cursor
+* `http` for remote/connector style MCP usage on `/mcp`
+
 ### Installation
 
 ```bash
-git clone https://github.com/builtwith/mcp.git
-cd mcp
+git clone https://github.com/builtwith/builtwith-mcp.git
+cd builtwith-mcp
 npm install
 ```
 
@@ -132,6 +139,32 @@ npm install
 ```
 
 > Note: The hosted endpoint is recommended for most users. Self-hosting is useful if you need custom routing, rate-limiting, or private network access.
+
+### Local HTTP MCP endpoint
+
+Run in HTTP mode:
+
+```bash
+MCP_TRANSPORT=http PORT=8787 node bw-mcp-v1.js
+```
+
+MCP endpoint:
+
+```text
+http://127.0.0.1:8787/mcp
+```
+
+Optional headers/environment:
+
+* `Authorization: Bearer YOUR_BUILTWITH_API_KEY` (per-request API key for HTTP mode)
+* `BUILTWITH_API_KEY` (used by stdio mode, and as fallback when no HTTP bearer token is provided)
+* `MCP_ALLOWED_ORIGINS` (comma-separated CORS/origin allowlist for HTTP mode)
+
+Health check:
+
+```text
+http://127.0.0.1:8787/health
+```
 
 ---
 
