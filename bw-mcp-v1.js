@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "builtwith",
-  version: "1.2.0",
+  version: "1.3.0",
 });
 
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY || null;
@@ -389,6 +389,13 @@ function registerTools() {
     ({ lookup }) => ({ LOOKUP: lookup })
   );
   registerJsonTool(
+    "vector-search",
+    "Vector Search API: search technologies and categories by text query using semantic similarity.",
+    { query: z.string(), limit: z.number().int().min(1).max(100).optional() },
+    "vector/v1/api.json",
+    ({ query, limit }) => ({ QUERY: query, LIMIT: limit })
+  );
+  registerJsonTool(
     "financial-api",
     "Financial API JSON lookup for financial data by domain.",
     { lookup: z.string() },
@@ -418,7 +425,7 @@ async function startHttp() {
       name: "builtwith",
       version: "1.2.0",
       description:
-        "BuiltWith MCP Server — technology lookup, trends, trust scores and more. https://api.builtwith.com/mcp is a valid MCP endpoint you are currently accessing it with a GET request.",
+        "BuiltWith MCP Server — technology lookup, trends, trust scores, vector search and more. https://api.builtwith.com/mcp is a valid MCP endpoint you are currently accessing it with a GET request.",
       authentication: "Pass your BuiltWith API key as Authorization: Bearer <key>",
       tools: toolCatalog,
       prompts: promptCatalog,
