@@ -68,6 +68,7 @@ The hosted MCP exposes the following tools:
 * `trust-api` – Trust scoring
 * `financial-api` – Financial data
 * `social-api` – Social profile associations
+* `vector-search` – Semantic similarity search across technologies and categories
 
 ---
 
