@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "builtwith",
-  version: "1.3.0",
+  version: "1.4.0",
 });
 
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY || null;
@@ -122,6 +122,40 @@ async function handleBuiltWithJson(path, params) {
   const result = await requestBuiltWithJson(path, params);
   if (!result.ok) return buildResponse(result.error);
   return buildResponse(result.data);
+}
+
+async function requestPaymentJson(path, { body } = {}) {
+  const apiKey = getCurrentApiKey();
+  if (!apiKey) {
+    return { ok: false, error: { error: "Missing BuiltWith API key." } };
+  }
+
+  const url = new URL(`https://payments.builtwith.com/${path}`);
+  url.searchParams.set("KEY", apiKey);
+
+  const options = body
+    ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+    : { method: "GET" };
+
+  let response;
+  try {
+    response = await fetch(url, options);
+  } catch (error) {
+    return { ok: false, error: { error: "Failed to reach BuiltWith Payments API.", details: error?.message || String(error) } };
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    return { ok: false, error: { error: "BuiltWith Payments API did not return JSON.", status: response.status } };
+  }
+
+  if (!response.ok) {
+    return { ok: false, error: { error: "BuiltWith Payments API error.", status: response.status, data } };
+  }
+
+  return { ok: true, data };
 }
 
 function extractTechnologies(data) {
@@ -408,6 +442,54 @@ function registerTools() {
     { lookup: z.string() },
     "social1/api.json",
     ({ lookup }) => ({ LOOKUP: lookup })
+  );
+
+  toolCatalog.push({
+    name: "payment-balance",
+    description: "Check your BuiltWith Agent Payment API credit balance. Returns credits_total, credits_used, and credits_available.",
+    parameters: {},
+  });
+  server.tool(
+    "payment-balance",
+    "Check your BuiltWith Agent Payment API credit balance. Returns credits_total, credits_used, and credits_available.",
+    {},
+    async () => {
+      const result = await requestPaymentJson("v1/billing/api-discovery");
+      if (!result.ok) return buildResponse(result.error);
+      return buildResponse(result.data);
+    }
+  );
+
+  toolCatalog.push({
+    name: "payment-config",
+    description: "Retrieve your BuiltWith Agent Payment API configuration. Returns max_per_purchase, max_monthly, monthly_purchased, monthly_remaining, and cost_per_2000_credits_usd.",
+    parameters: {},
+  });
+  server.tool(
+    "payment-config",
+    "Retrieve your BuiltWith Agent Payment API configuration. Returns max_per_purchase, max_monthly, monthly_purchased, monthly_remaining, and cost_per_2000_credits_usd.",
+    {},
+    async () => {
+      const result = await requestPaymentJson("v1/billing/api-configuration");
+      if (!result.ok) return buildResponse(result.error);
+      return buildResponse(result.data);
+    }
+  );
+
+  toolCatalog.push({
+    name: "payment-purchase",
+    description: "Purchase BuiltWith API credits using your saved Stripe payment method. Minimum 2,000 credits per purchase. Returns success, credits_purchased, cost_usd, payment_id, and credits_available.",
+    parameters: { credits: "number" },
+  });
+  server.tool(
+    "payment-purchase",
+    "Purchase BuiltWith API credits using your saved Stripe payment method. Minimum 2,000 credits per purchase. Returns success, credits_purchased, cost_usd, payment_id, and credits_available.",
+    { credits: z.number().int().min(2000).describe("Number of credits to purchase (minimum 2000)") },
+    async ({ credits }) => {
+      const result = await requestPaymentJson("v1/billing/api-purchase", { body: { credits } });
+      if (!result.ok) return buildResponse(result.error);
+      return buildResponse(result.data);
+    }
   );
 }
 
