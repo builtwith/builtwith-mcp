@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "builtwith",
-  version: "1.4.0",
+  version: "1.5.0",
 });
 
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY || null;
@@ -442,6 +442,13 @@ function registerTools() {
     { lookup: z.string() },
     "social1/api.json",
     ({ lookup }) => ({ LOOKUP: lookup })
+  );
+  registerJsonTool(
+    "keyword-search-api",
+    "Keyword Search API: find websites containing a specific keyword, with optional limit and pagination offset.",
+    { keyword: z.string(), limit: z.number().int().min(16).max(1000).optional(), offset: z.string().optional() },
+    "kws1/api.json",
+    ({ keyword, limit, offset }) => ({ KEYWORD: keyword, LIMIT: limit, OFFSET: offset })
   );
 
   toolCatalog.push({
