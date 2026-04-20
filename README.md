@@ -72,6 +72,8 @@ The hosted MCP exposes the following tools:
 * `payment-balance` – Check your API credit balance
 * `payment-config` – Retrieve your payment configuration
 * `payment-purchase` – Purchase API credits using your saved Stripe payment method
+* `agent-auth-start` – Start Agent Device-Code Authorization (no API key required)
+* `agent-auth-token` – Poll for authorization result and retrieve access token (no API key required)
 
 ---
 
@@ -169,6 +171,22 @@ Health check:
 ```text
 http://127.0.0.1:8787/health
 ```
+
+---
+
+## 🔐 Agent Device-Code Authorization
+
+Agents can obtain a temporary `bw-` prefixed API token without the user pasting their key — the user approves access in their browser.
+
+**Flow:**
+
+1. Call `agent-auth-start` → receive `device_code` and `verification_uri`
+2. Direct the user to open `verification_uri` in their browser
+3. Poll `agent-auth-token` every 5 seconds with the `device_code`
+4. On approval, receive an `access_token` (`bw-...`) valid for the chosen duration (1 hour / 1 day / 30 days)
+5. Use the token as `KEY=bw-...` on any BuiltWith API endpoint
+
+No API key is required to call `agent-auth-start` or `agent-auth-token`.
 
 ---
 
