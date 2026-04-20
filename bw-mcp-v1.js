@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "builtwith",
-  version: "1.5.0",
+  version: "1.6.0",
 });
 
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY || null;
@@ -156,6 +156,29 @@ async function requestPaymentJson(path, { body } = {}) {
   }
 
   return { ok: true, data };
+}
+
+async function requestAgentAuthJson(path, body) {
+  const url = new URL(`https://${BUILTWITH_API_HOSTNAME}/${path}`);
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
+    });
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      return { ok: false, error: { error: "Agent auth API did not return JSON.", status: response.status } };
+    }
+    if (!response.ok) {
+      return { ok: false, error: { error: "Agent auth API error.", status: response.status, data } };
+    }
+    return { ok: true, data };
+  } catch (error) {
+    return { ok: false, error: { error: "Failed to reach agent auth API.", details: error?.message || String(error) } };
+  }
 }
 
 function extractTechnologies(data) {
@@ -494,6 +517,38 @@ function registerTools() {
     { credits: z.number().int().min(2000).describe("Number of credits to purchase (minimum 2000)") },
     async ({ credits }) => {
       const result = await requestPaymentJson("v1/billing/api-purchase", { body: { credits } });
+      if (!result.ok) return buildResponse(result.error);
+      return buildResponse(result.data);
+    }
+  );
+
+  toolCatalog.push({
+    name: "agent-auth-start",
+    description: "Start the Agent Device-Code Authorization flow. Returns a device_code and verification_uri. Direct the user to open the verification_uri in their browser to approve access. Then poll agent-auth-token every 5 seconds until approved or denied.",
+    parameters: {},
+  });
+  server.tool(
+    "agent-auth-start",
+    "Start the Agent Device-Code Authorization flow. Returns a device_code and verification_uri. Direct the user to open the verification_uri in their browser to approve access. Then poll agent-auth-token every 5 seconds until approved or denied.",
+    {},
+    async () => {
+      const result = await requestAgentAuthJson("agent-auth/start");
+      if (!result.ok) return buildResponse(result.error);
+      return buildResponse(result.data);
+    }
+  );
+
+  toolCatalog.push({
+    name: "agent-auth-token",
+    description: "Poll for the result of an Agent Device-Code Authorization flow. Call every 5 seconds after agent-auth-start. Returns status ('pending', 'approved', or 'denied') and, on approval, an access_token (bw-...) that can be used as the API key on any BuiltWith endpoint.",
+    parameters: { device_code: "string" },
+  });
+  server.tool(
+    "agent-auth-token",
+    "Poll for the result of an Agent Device-Code Authorization flow. Call every 5 seconds after agent-auth-start. Returns status ('pending', 'approved', or 'denied') and, on approval, an access_token (bw-...) that can be used as the API key on any BuiltWith endpoint.",
+    { device_code: z.string().describe("Device code received from agent-auth-start") },
+    async ({ device_code }) => {
+      const result = await requestAgentAuthJson("agent-auth/token", { device_code });
       if (!result.ok) return buildResponse(result.error);
       return buildResponse(result.data);
     }
