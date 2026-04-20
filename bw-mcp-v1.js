@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "builtwith",
-  version: "1.6.0",
+  version: "1.6.1",
 });
 
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY || null;
@@ -532,7 +532,7 @@ function registerTools() {
     "Start the Agent Device-Code Authorization flow. Returns a device_code and verification_uri. Direct the user to open the verification_uri in their browser to approve access. Then poll agent-auth-token every 5 seconds until approved or denied.",
     {},
     async () => {
-      const result = await requestAgentAuthJson("agent-auth/start");
+      const result = await requestAgentAuthJson("agent-auth-start");
       if (!result.ok) return buildResponse(result.error);
       return buildResponse(result.data);
     }
@@ -540,15 +540,15 @@ function registerTools() {
 
   toolCatalog.push({
     name: "agent-auth-token",
-    description: "Poll for the result of an Agent Device-Code Authorization flow. Call every 5 seconds after agent-auth-start. Returns status ('pending', 'approved', or 'denied') and, on approval, an access_token (bw-...) that can be used as the API key on any BuiltWith endpoint.",
+    description: "Poll for the result of an Agent Device-Code Authorization flow. Call every 5 seconds after agent-auth-start. Returns { access_token, token_type, expires_in } on approval, { error: 'authorization_pending' } while waiting, or { error: 'access_denied' } if denied. Use access_token as the API key on any BuiltWith endpoint.",
     parameters: { device_code: "string" },
   });
   server.tool(
     "agent-auth-token",
-    "Poll for the result of an Agent Device-Code Authorization flow. Call every 5 seconds after agent-auth-start. Returns status ('pending', 'approved', or 'denied') and, on approval, an access_token (bw-...) that can be used as the API key on any BuiltWith endpoint.",
+    "Poll for the result of an Agent Device-Code Authorization flow. Call every 5 seconds after agent-auth-start. Returns { access_token, token_type, expires_in } on approval, { error: 'authorization_pending' } while waiting, or { error: 'access_denied' } if denied. Use access_token as the API key on any BuiltWith endpoint.",
     { device_code: z.string().describe("Device code received from agent-auth-start") },
     async ({ device_code }) => {
-      const result = await requestAgentAuthJson("agent-auth/token", { device_code });
+      const result = await requestAgentAuthJson("agent-auth-token", { device_code });
       if (!result.ok) return buildResponse(result.error);
       return buildResponse(result.data);
     }
