@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "builtwith",
-  version: "1.6.2",
+  version: "1.6.3",
 });
 
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY || null;
@@ -374,6 +374,13 @@ function registerTools() {
     { lookup: z.string() },
     "v22/api.json",
     ({ lookup }) => ({ LOOKUP: lookup })
+  );
+  registerJsonTool(
+    "change-api",
+    "Change API JSON lookup for technology additions and removals by domain, with optional natural-language SINCE date.",
+    { lookup: z.string(), since: z.string().optional() },
+    "change1/api.json",
+    ({ lookup, since }) => ({ LOOKUP: lookup, SINCE: since })
   );
   registerJsonTool(
     "relationships-api",

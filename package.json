@@ -1,6 +1,6 @@
 {
   "name": "@builtwith/mcp-server",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "description": "MCP server for BuiltWith API integration",
   "type": "module",
   "main": "bw-mcp-v1.js",

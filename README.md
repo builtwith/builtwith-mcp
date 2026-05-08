@@ -56,6 +56,7 @@ The hosted MCP exposes the following tools:
 
 * `domain-lookup` – Live technology detection for a domain
 * `domain-api` – Full domain metadata
+* `change-api` – Technology additions and removals with business context
 * `relationships-api` – Related websites
 * `free-api` – Category and group counts
 * `company-to-url` – Company → domain discovery
