@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "builtwith",
-  version: "1.6.3",
+  version: "1.6.4",
 });
 
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY || null;
@@ -227,6 +227,35 @@ function registerJsonTool(name, description, schema, path, buildParams) {
   server.tool(name, description, schema, async (input) => handleBuiltWithJson(path, buildParams(input)));
 }
 
+const listAttributeFilterKeys = [
+  "SPEND", "REVENUE", "SKU", "FOLLOWERS", "EMPLOYEES", "SITEMAP",
+  "PAGERANK", "BWRANK", "TRANCO", "MAJESTIC", "BWS", "ECAT",
+  "AIM", "AIO", "AIR", "AIV",
+];
+
+function buildListApiParams(input) {
+  const params = {
+    TECH: input.tech,
+    OTHERTECHS: input.otherTechs,
+    META: input.meta ? "yes" : undefined,
+    COUNTRY: input.country,
+    OFFSET: input.offset,
+    SINCE: input.since,
+    ALL: input.all ? "yes" : undefined,
+  };
+
+  for (const key of listAttributeFilterKeys) {
+    const inputKey = key.toLowerCase();
+    if (input[inputKey] !== undefined) params[key] = input[inputKey];
+  }
+
+  for (const [key, value] of Object.entries(input.filters || {})) {
+    params[key.toUpperCase()] = value;
+  }
+
+  return params;
+}
+
 function registerPrompts() {
   promptCatalog.push(
     {
@@ -381,6 +410,38 @@ function registerTools() {
     { lookup: z.string(), since: z.string().optional() },
     "change1/api.json",
     ({ lookup, since }) => ({ LOOKUP: lookup, SINCE: since })
+  );
+  registerJsonTool(
+    "lists-api",
+    "Lists API JSON lookup for sites using a technology. Supports OTHERTECHS and numeric filters such as SPEND=100|GT, REVENUE=100000|GT, EMPLOYEES=50|GTE, and additional filters.",
+    {
+      tech: z.string(),
+      otherTechs: z.string().optional(),
+      meta: z.boolean().optional(),
+      country: z.string().optional(),
+      offset: z.string().optional(),
+      since: z.string().optional(),
+      all: z.boolean().optional(),
+      spend: z.string().optional(),
+      revenue: z.string().optional(),
+      sku: z.string().optional(),
+      followers: z.string().optional(),
+      employees: z.string().optional(),
+      sitemap: z.string().optional(),
+      pagerank: z.string().optional(),
+      bwrank: z.string().optional(),
+      tranco: z.string().optional(),
+      majestic: z.string().optional(),
+      bws: z.string().optional(),
+      ecat: z.string().optional(),
+      aim: z.string().optional(),
+      aio: z.string().optional(),
+      air: z.string().optional(),
+      aiv: z.string().optional(),
+      filters: z.record(z.string()).optional(),
+    },
+    "lists12/api.json",
+    buildListApiParams
   );
   registerJsonTool(
     "relationships-api",
