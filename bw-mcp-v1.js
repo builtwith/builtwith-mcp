@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "builtwith",
-  version: "1.6.4",
+  version: "1.6.5",
 });
 
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY || null;
@@ -540,6 +540,23 @@ function registerTools() {
     { keyword: z.string(), limit: z.number().int().min(16).max(1000).optional(), offset: z.string().optional() },
     "kws1/api.json",
     ({ keyword, limit, offset }) => ({ KEYWORD: keyword, LIMIT: limit, OFFSET: offset })
+  );
+  registerJsonTool(
+    "ask-api",
+    "Ask API: natural language website list lookup. Sample requests always return a sample result. Use COMMIT=true to create and run a full Ask report (up to 1000 results). Paginate using NEXTOFFSET from the previous response; END means no more pages.",
+    {
+      query: z.string(),
+      commit: z.boolean().optional(),
+      nextOffset: z.string().optional(),
+      meta: z.boolean().optional(),
+    },
+    "ask1/api.json",
+    ({ query, commit, nextOffset, meta }) => ({
+      QUERY: query,
+      COMMIT: commit ? "true" : undefined,
+      NEXTOFFSET: nextOffset,
+      META: meta ? "yes" : undefined,
+    })
   );
 
   toolCatalog.push({

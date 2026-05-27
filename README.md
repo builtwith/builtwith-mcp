@@ -71,6 +71,7 @@ The hosted MCP exposes the following tools:
 * `financial-api` – Financial data
 * `social-api` – Social profile associations
 * `vector-search` – Semantic similarity search across technologies and categories
+* `ask-api` – Natural language website list lookup (e.g. "Magento websites in Spain"); supports full reports and pagination
 * `payment-balance` – Check your API credit balance
 * `payment-config` – Retrieve your payment configuration
 * `payment-purchase` – Purchase API credits using your saved Stripe payment method
