@@ -68,8 +68,8 @@ The hosted MCP exposes the following tools:
 * `trends-api` – Technology trend data
 * `product-api` – Ecommerce product search
 * `trust-api` – Trust scoring
-* `financial-api` – Financial data
-* `social-api` – Social profile associations
+* `whoami-api` – Account limits, credit costs, and endpoint inventory (no API credits)
+* `usage-api` – Current credit balance (no API credits)
 * `vector-search` – Semantic similarity search across technologies and categories
 * `ask-api` – Natural language website list lookup (e.g. "Magento websites in Spain"); supports full reports and pagination
 * `payment-balance` – Check your API credit balance

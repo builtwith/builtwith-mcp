@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "builtwith",
-  version: "1.6.5",
+  version: "1.8.0",
 });
 
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY || null;
@@ -21,7 +21,7 @@ const MCP_ALLOWED_ORIGINS = (process.env.MCP_ALLOWED_ORIGINS || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-// Per-request store: { api_key: string | null }
+// Per-request store: { apiKey: string | null, req: Request | null }
 const als = new AsyncLocalStorage();
 
 const toolCatalog = [];
@@ -61,6 +61,13 @@ function getCurrentApiKey() {
   const store = als.getStore();
   // HTTP mode: per-request key, stdio mode: env key fallback.
   return store?.apiKey || BUILTWITH_API_KEY;
+}
+
+function isOpenAiRequest() {
+  const req = als.getStore()?.req;
+  if (!req) return false;
+  const ua = String(req.headers?.["user-agent"] || "");
+  return /openai|chatgpt/i.test(ua);
 }
 
 async function requestBuiltWithJson(path, params) {
@@ -181,14 +188,54 @@ async function requestAgentAuthJson(path, body) {
   }
 }
 
+function firstText(source, keys) {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (value === undefined || value === null) continue;
+    if (Array.isArray(value)) {
+      const first = value.find(item => item !== undefined && item !== null && String(item).trim());
+      if (first !== undefined) return String(first).trim();
+      continue;
+    }
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return "";
+}
+
+function firstArray(source, keys) {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (!Array.isArray(value)) continue;
+    return value.map(item => String(item || "").trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function domainApiPathLabel(path, rootDomain) {
+  const url = String(path?.Url || path?.Path || "").trim();
+  const domain = String(path?.Domain || "").trim();
+  const subDomain = String(path?.SubDomain || "").trim();
+  const host = subDomain || domain;
+
+  if (host && rootDomain && host.toLowerCase() !== rootDomain) {
+    return url ? `${host}${url.startsWith("/") ? "" : "/"}${url}` : host;
+  }
+
+  if (url) return url;
+  return "/";
+}
+
 function extractTechnologies(data) {
   const extracted = [];
+  const rootDomain = String(data?.Results?.[0]?.Lookup || "").trim().toLowerCase();
   const paths = data?.Results?.[0]?.Result?.Paths;
   if (!Array.isArray(paths)) return extracted;
 
   for (const p of paths) {
     const technologies = p?.Technologies;
     if (!Array.isArray(technologies)) continue;
+    const path = domainApiPathLabel(p, rootDomain);
 
     for (const tech of technologies) {
       if (!tech) continue;
@@ -197,11 +244,45 @@ function extractTechnologies(data) {
         Description: tech.Description || "",
         Tag: tech.Tag || "",
         Link: tech.Link || "",
+        Path: path,
+        PathDomain: p?.Domain || "",
+        SubDomain: p?.SubDomain || "",
+        Categories: Array.isArray(tech.Categories) ? tech.Categories.filter(Boolean) : [],
+        IsPremium: tech.IsPremium || "",
+        FirstDetected: Number(tech.FirstDetected || 0),
+        LastDetected: Number(tech.LastDetected || 0),
+        PathLastIndexed: Number(p?.LastIndexed || 0),
       });
     }
   }
 
   return extracted;
+}
+
+function extractAskSites(data) {
+  const results = Array.isArray(data?.Results) ? data.Results : [];
+  return results.map((item) => {
+    const domain = firstText(item, ["D", "Domain", "domain", "Url", "URL", "Website"]);
+    const country = firstText(item, ["Country", "C", "CountryCode"]);
+    const locationParts = [
+      firstText(item, ["City"]),
+      firstText(item, ["State", "Region"]),
+      country,
+    ].filter(Boolean);
+
+    return {
+      Domain: domain,
+      Title: firstText(item, ["Title", "T", "Name"]),
+      Description: firstText(item, ["Description", "Desc", "MetaDescription"]),
+      Company: firstText(item, ["Company", "CompanyName", "LegalName", "Name"]),
+      Location: locationParts.join(", "),
+      Country: country,
+      Vertical: firstText(item, ["Vertical", "Industry", "Category"]),
+      Spend: Number(firstText(item, ["Spend", "EstimatedSpend"]) || 0),
+      Technologies: firstArray(item, ["Technologies", "Tech", "Tags", "Categories"]),
+      LinkedOnSites: firstArray(item, ["LOS", "LinkedOnSites", "LocationsOnSite"]),
+    };
+  }).filter(site => site.Domain);
 }
 
 function zodSchemaToJson(schema) {
@@ -258,31 +339,12 @@ function buildListApiParams(input) {
 
 function registerPrompts() {
   promptCatalog.push(
-    {
-      name: "analyze-tech-stack",
-      description: "Analyze the technology stack of a domain",
-      parameters: { domain: "string" },
-    },
-    {
-      name: "find-related-websites",
-      description: "Find websites related to a domain",
-      parameters: { domain: "string" },
-    },
-    {
-      name: "get-technology-recommendations",
-      description: "Get technology recommendations for a domain",
-      parameters: { domain: "string" },
-    },
-    {
-      name: "research-company",
-      description: "Research a company's web presence by name",
-      parameters: { company: "string" },
-    },
-    {
-      name: "check-domain-trust",
-      description: "Check the trust score of a domain",
-      parameters: { domain: "string" },
-    }
+    { name: "analyze-tech-stack", description: "Analyze the technology stack of a domain", parameters: { domain: "string" } },
+    { name: "find-related-websites", description: "Find websites related to a domain", parameters: { domain: "string" } },
+    { name: "get-technology-recommendations", description: "Get technology recommendations for a domain", parameters: { domain: "string" } },
+    { name: "research-company", description: "Research a company's web presence by name", parameters: { company: "string" } },
+    { name: "check-domain-trust", description: "Check the trust score of a domain", parameters: { domain: "string" } },
+    { name: "discover-technologies-by-concept", description: "Search for technologies matching a concept, then explore adoption", parameters: { concept: "string" } },
   );
 
   server.prompt(
@@ -290,15 +352,10 @@ function registerPrompts() {
     "Analyze the technology stack of a domain",
     { domain: z.string() },
     ({ domain }) => ({
-      messages: [
-        {
-          role: "user",
-          content: {
-            type: "text",
-            text: `Use the domain-lookup tool to retrieve the live technologies used on "${domain}". Summarize the tech stack by category (e.g. analytics, hosting, frameworks, CMS, CDN, widgets) and highlight any notable or unusual choices.`,
-          },
-        },
-      ],
+      messages: [{
+        role: "user",
+        content: { type: "text", text: `Use the domain-lookup tool to retrieve the live technologies used on "${domain}". Summarize the tech stack by category (e.g. analytics, hosting, frameworks, CMS, CDN, widgets) and highlight any notable or unusual choices.` },
+      }],
     })
   );
 
@@ -307,15 +364,10 @@ function registerPrompts() {
     "Find websites related to a domain",
     { domain: z.string() },
     ({ domain }) => ({
-      messages: [
-        {
-          role: "user",
-          content: {
-            type: "text",
-            text: `Use the relationships-api tool to find websites related to "${domain}". Summarize the relationships found, grouping them by type (e.g. shared analytics, shared hosting, same owner).`,
-          },
-        },
-      ],
+      messages: [{
+        role: "user",
+        content: { type: "text", text: `Use the relationships-api tool to find websites related to "${domain}". Summarize the relationships found, grouping them by type (e.g. shared analytics, shared hosting, same owner).` },
+      }],
     })
   );
 
@@ -324,15 +376,10 @@ function registerPrompts() {
     "Get technology recommendations for a domain",
     { domain: z.string() },
     ({ domain }) => ({
-      messages: [
-        {
-          role: "user",
-          content: {
-            type: "text",
-            text: `Use the recommendations-api tool to get technology recommendations for "${domain}". Present the recommendations clearly, explaining what each suggested technology does and why it might be a good fit.`,
-          },
-        },
-      ],
+      messages: [{
+        role: "user",
+        content: { type: "text", text: `Use the recommendations-api tool to get technology recommendations for "${domain}". Present the recommendations clearly, explaining what each suggested technology does and why it might be a good fit.` },
+      }],
     })
   );
 
@@ -341,15 +388,10 @@ function registerPrompts() {
     "Research a company's web presence by name",
     { company: z.string() },
     ({ company }) => ({
-      messages: [
-        {
-          role: "user",
-          content: {
-            type: "text",
-            text: `First use the company-to-url tool to find domains associated with "${company}". Then use the domain-lookup tool on the primary domain to analyze their tech stack. Provide a summary of the company's web presence and the technologies they use.`,
-          },
-        },
-      ],
+      messages: [{
+        role: "user",
+        content: { type: "text", text: `First use the company-to-url tool to find domains associated with "${company}". Then use the domain-lookup tool on the primary domain to analyze their tech stack. Provide a summary of the company's web presence and the technologies they use.` },
+      }],
     })
   );
 
@@ -358,15 +400,25 @@ function registerPrompts() {
     "Check the trust score of a domain",
     { domain: z.string() },
     ({ domain }) => ({
-      messages: [
-        {
-          role: "user",
-          content: {
-            type: "text",
-            text: `Use the trust-api tool to look up the trust score for "${domain}". Explain the trust score, what factors contribute to it, and any concerns or positive signals found.`,
-          },
+      messages: [{
+        role: "user",
+        content: { type: "text", text: `Use the trust-api tool to look up the trust score for "${domain}". Explain the trust score, what factors contribute to it, and any concerns or positive signals found.` },
+      }],
+    })
+  );
+
+  server.prompt(
+    "discover-technologies-by-concept",
+    "Search for technologies matching a concept, then explore adoption",
+    { concept: z.string() },
+    ({ concept }) => ({
+      messages: [{
+        role: "user",
+        content: {
+          type: "text",
+          text: `Use the vector-api tool to search for technologies matching "${concept}". Take the top results and for each relevant technology name found, use the trends-api tool to show adoption trends. Summarize which technologies best match the concept and how widely they are used.`,
         },
-      ],
+      }],
     })
   );
 }
@@ -383,7 +435,7 @@ function registerTools() {
     "Returns the live web technologies used on the root domain name.",
     { domain: z.string(), liveOnly: z.boolean().optional() },
     async ({ domain, liveOnly }) => {
-      const result = await requestBuiltWithJson("v22/api.json", {
+      const result = await requestBuiltWithJson("v23/api.json", {
         LOOKUP: domain,
         LIVEONLY: liveOnly === false ? undefined : "yes",
       });
@@ -401,13 +453,23 @@ function registerTools() {
     "domain-api",
     "Domain API JSON lookup for technology and metadata by domain.",
     { lookup: z.string() },
-    "v22/api.json",
+    "v23/api.json",
+    ({ lookup }) => ({ LOOKUP: lookup })
+  );
+  registerJsonTool(
+    "domain-api-json",
+    "Raw Domain API JSON lookup for technology and metadata by domain.",
+    { lookup: z.string() },
+    "v23/api.json",
     ({ lookup }) => ({ LOOKUP: lookup })
   );
   registerJsonTool(
     "change-api",
-    "Change API JSON lookup for technology additions and removals by domain, with optional natural-language SINCE date.",
-    { lookup: z.string(), since: z.string().optional() },
+    "Change API JSON lookup for technology additions and removals by domain. Supports one or more comma-separated domains and optional natural language SINCE values such as 'last month'.",
+    {
+      lookup: z.string().describe("Domain name, or comma-separated domain names, to check for technology changes"),
+      since: z.string().optional().describe("Optional natural language date range such as 'last month'; defaults to 3 months"),
+    },
     "change1/api.json",
     ({ lookup, since }) => ({ LOOKUP: lookup, SINCE: since })
   );
@@ -493,6 +555,17 @@ function registerTools() {
     ({ lookup }) => ({ LOOKUP: lookup })
   );
   registerJsonTool(
+    "keywords-search-api",
+    "Keyword Search API — find websites containing a specific keyword. Returns a list of matching domains and a NextOffset value for pagination. Costs API credits per query.",
+    {
+      keyword: z.string().describe("The keyword to search for (e.g. 'perfume')"),
+      limit: z.number().int().min(16).max(1000).optional().describe("Results per request (16–1000, default 100)"),
+      offset: z.string().optional().describe("Domain name from the previous response's NextOffset for pagination"),
+    },
+    "kws1/api.json",
+    ({ keyword, limit, offset }) => ({ KEYWORD: keyword, LIMIT: limit, OFFSET: offset })
+  );
+  registerJsonTool(
     "trends-api",
     "Trends API JSON lookup for technology trend data.",
     { tech: z.string() },
@@ -514,41 +587,76 @@ function registerTools() {
     ({ lookup }) => ({ LOOKUP: lookup })
   );
   registerJsonTool(
-    "vector-search",
-    "Vector Search API: search technologies and categories by text query using semantic similarity.",
-    { query: z.string(), limit: z.number().int().min(1).max(100).optional() },
+    "vector-api",
+    "Search BuiltWith technologies and categories by text query using vector similarity. Returns ranked results with similarity scores (0–1), descriptions, and category info. Useful for discovering what technologies match a concept or description (e.g. 'react framework', 'payment gateway', 'live chat'). Costs 1 API credit per query.",
+    {
+      query: z.string().describe("Text to search for (e.g. 'javascript framework', 'email marketing')"),
+      limit: z.number().int().min(1).max(100).optional().describe("Max results to return (default 10, max 100)"),
+    },
     "vector/v1/api.json",
     ({ query, limit }) => ({ QUERY: query, LIMIT: limit })
   );
   registerJsonTool(
-    "financial-api",
-    "Financial API JSON lookup for financial data by domain.",
-    { lookup: z.string() },
-    "financial1/api.json",
-    ({ lookup }) => ({ LOOKUP: lookup })
+    "whoami-api",
+    "WhoAmI API JSON lookup for account limits, credit costs, privacy flags, max batch sizes, and endpoint inventory. Uses no API credits. Call this first to make account-aware decisions.",
+    {},
+    "whoamiv1/api.json",
+    () => ({})
   );
   registerJsonTool(
-    "social-api",
-    "Social API JSON lookup for domains related to social profiles.",
-    { lookup: z.string() },
-    "social1/api.json",
-    ({ lookup }) => ({ LOOKUP: lookup })
+    "usage-api",
+    "Usage API JSON lookup for current credit balance (used, purchased, remaining). Uses no API credits.",
+    {},
+    "usagev2/api.json",
+    () => ({})
   );
-  registerJsonTool(
-    "keyword-search-api",
-    "Keyword Search API: find websites containing a specific keyword, with optional limit and pagination offset.",
-    { keyword: z.string(), limit: z.number().int().min(16).max(1000).optional(), offset: z.string().optional() },
-    "kws1/api.json",
-    ({ keyword, limit, offset }) => ({ KEYWORD: keyword, LIMIT: limit, OFFSET: offset })
-  );
-  registerJsonTool(
+
+  toolCatalog.push({
+    name: "ask-api",
+    description: "Ask API lookup for natural language website list queries. OpenAI requests are served as preview results and do not commit full reports.",
+    parameters: { query: "string", commit: "boolean (optional)", nextOffset: "string (optional)", meta: "boolean (optional)" },
+  });
+  server.tool(
     "ask-api",
-    "Ask API: natural language website list lookup. Sample requests always return a sample result. Use COMMIT=true to create and run a full Ask report (up to 1000 results). Paginate using NEXTOFFSET from the previous response; END means no more pages.",
+    "Ask API lookup for natural language website list queries. OpenAI requests are served as preview results and do not commit full reports.",
     {
-      query: z.string(),
-      commit: z.boolean().optional(),
-      nextOffset: z.string().optional(),
-      meta: z.boolean().optional(),
+      query: z.string().describe("The natural language query (e.g. 'Magento websites in Spain')"),
+      commit: z.boolean().optional().describe("Ignored for OpenAI/ChatGPT requests; use ask-api-json outside ChatGPT for committed reports"),
+      nextOffset: z.string().optional().describe("Pagination offset from the previous response's NextOffset"),
+      meta: z.boolean().optional().describe("Set to true to include metadata in the results"),
+    },
+    async ({ query, commit, nextOffset, meta }) => {
+      const openAiPreview = isOpenAiRequest();
+      const shouldCommit = Boolean(commit) && !openAiPreview;
+      const result = await requestBuiltWithJson("ask1/api.json", {
+        QUERY: query,
+        COMMIT: shouldCommit ? "true" : undefined,
+        NEXTOFFSET: nextOffset,
+        META: meta ? "yes" : undefined,
+      });
+      if (!result.ok) return buildResponse(result.error);
+      const sites = extractAskSites(result.data);
+      const nextOffsetVal = String(result.data?.NextOffset || result.data?.nextOffset || "");
+      return buildResponse({
+        query,
+        count: sites.length,
+        committed: shouldCommit,
+        requestedCommit: Boolean(commit),
+        openAiPreview,
+        nextOffset: nextOffsetVal,
+        sites,
+      });
+    }
+  );
+
+  registerJsonTool(
+    "ask-api-json",
+    "Raw Ask API JSON lookup for natural language website list queries. Allows COMMIT=true for non-OpenAI clients.",
+    {
+      query: z.string().describe("The natural language query (e.g. 'Magento websites in Spain')"),
+      commit: z.boolean().optional().describe("Set to true to run a full report returning up to 1000 results"),
+      nextOffset: z.string().optional().describe("Pagination offset from the previous response's NextOffset"),
+      meta: z.boolean().optional().describe("Set to true to include metadata in the results"),
     },
     "ask1/api.json",
     ({ query, commit, nextOffset, meta }) => ({
@@ -652,7 +760,7 @@ async function startHttp() {
   app.get("/mcp", (req, res) => {
     res.json({
       name: "builtwith",
-      version: "1.2.0",
+      version: "1.8.0",
       description:
         "BuiltWith MCP Server — technology lookup, trends, trust scores, vector search and more. https://api.builtwith.com/mcp is a valid MCP endpoint you are currently accessing it with a GET request.",
       authentication: "Pass your BuiltWith API key as Authorization: Bearer <key>",
@@ -666,7 +774,7 @@ async function startHttp() {
 
     const apiKey = extractBearerApiKeyOptional(req);
 
-    als.run({ apiKey }, async () => {
+    als.run({ apiKey, req }, async () => {
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
       });
