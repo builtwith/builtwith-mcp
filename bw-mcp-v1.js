@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "builtwith",
-  version: "1.8.0",
+  version: "1.9.0",
 });
 
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY || null;
@@ -464,6 +464,13 @@ function registerTools() {
     ({ lookup }) => ({ LOOKUP: lookup })
   );
   registerJsonTool(
+    "domain-api-json",
+    "Raw Domain API JSON lookup for technology and metadata by domain.",
+    { lookup: z.string() },
+    "v22/api.json",
+    ({ lookup }) => ({ LOOKUP: lookup })
+  );
+  registerJsonTool(
     "change-api",
     "Change API JSON lookup for technology additions and removals by domain. Supports one or more comma-separated domains and optional natural language SINCE values such as 'last month'.",
     {
@@ -585,6 +592,20 @@ function registerTools() {
     { lookup: z.string() },
     "trustv1/api.json",
     ({ lookup }) => ({ LOOKUP: lookup })
+  );
+  registerJsonTool(
+    "vat-api",
+    "VAT API JSON lookup for VAT, GST, CNPJ, ABN, and other publicly displayed company registration numbers associated with websites. Accepts 1-16 comma-separated domains. Uses 1 API credit only for each domain that returns registration data; domains with no results use no credits.",
+    { lookup: z.string().describe("1 to 16 comma-separated domains") },
+    "vat1/api.json",
+    ({ lookup }) => ({ LOOKUP: lookup })
+  );
+  registerJsonTool(
+    "vat-types-api",
+    "List every company registration type that the VAT API may return, including its code, friendly name, and description. Public endpoint; no API key or credits required.",
+    {},
+    "vat1/types.json",
+    () => ({})
   );
   registerJsonTool(
     "vector-api",
@@ -760,7 +781,7 @@ async function startHttp() {
   app.get("/mcp", (req, res) => {
     res.json({
       name: "builtwith",
-      version: "1.8.0",
+      version: "1.9.0",
       description:
         "BuiltWith MCP Server — technology lookup, trends, trust scores, vector search and more. https://api.builtwith.com/mcp is a valid MCP endpoint you are currently accessing it with a GET request.",
       authentication: "Pass your BuiltWith API key as Authorization: Bearer <key>",

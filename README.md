@@ -68,6 +68,8 @@ The hosted MCP exposes the following tools:
 * `trends-api` – Technology trend data
 * `product-api` – Ecommerce product search
 * `trust-api` – Trust scoring
+* `vat-api` – VAT, GST, and other company registration numbers for websites
+* `vat-types-api` – Reference list of registration types returned by `vat-api` (no API key required)
 * `whoami-api` – Account limits, credit costs, and endpoint inventory (no API credits)
 * `usage-api` – Current credit balance (no API credits)
 * `vector-search` – Semantic similarity search across technologies and categories
