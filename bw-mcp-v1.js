@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "builtwith",
-  version: "1.10.0",
+  version: "1.11.0",
 });
 
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY || null;
@@ -619,6 +619,17 @@ function registerTools() {
     ({ search, category, offset }) => ({ SEARCH: search, CATEGORY: category, OFFSET: offset })
   );
   registerJsonTool(
+    "mcp-registry-v2-api",
+    "Search and browse the BuiltWith MCP registry (v2) of other remote MCP servers BuiltWith has discovered (not an MCP protocol endpoint itself). Returns a JSON array of servers: {Domain, Category, Description, Endpoints: [{Endpoint, AuthRequired, Tools: [{Name, Description}]}], first_detected, last_detected}. SEARCH matches domain, description, endpoint URL, and tool names/descriptions. Especially useful for AI agents/MCP clients discovering remote MCP servers and methods to connect to. Free; no API credits used; rate limited to 1 request per second per API key.",
+    {
+      search: z.string().optional().describe("Text to search for (matches domain, description, endpoint URL, and tool names/descriptions)"),
+      category: z.string().optional().describe("Category to filter by (e.g. 'developer-tools')"),
+      offset: z.number().int().min(0).optional().describe("Offset for pagination"),
+    },
+    "mcp2/api.json",
+    ({ search, category, offset }) => ({ SEARCH: search, CATEGORY: category, OFFSET: offset })
+  );
+  registerJsonTool(
     "vector-api",
     "Search BuiltWith technologies and categories by text query using vector similarity. Returns ranked results with similarity scores (0–1), descriptions, and category info. Useful for discovering what technologies match a concept or description (e.g. 'react framework', 'payment gateway', 'live chat'). Costs 1 API credit per query.",
     {
@@ -792,7 +803,7 @@ async function startHttp() {
   app.get("/mcp", (req, res) => {
     res.json({
       name: "builtwith",
-      version: "1.10.0",
+      version: "1.11.0",
       description:
         "BuiltWith MCP Server — technology lookup, trends, trust scores, vector search and more. https://api.builtwith.com/mcp is a valid MCP endpoint you are currently accessing it with a GET request.",
       authentication: "Pass your BuiltWith API key as Authorization: Bearer <key>",

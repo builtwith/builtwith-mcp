@@ -72,7 +72,8 @@ The hosted MCP exposes the following tools:
 * `vat-types-api` – Reference list of registration types returned by `vat-api` (no API key required)
 * `whoami-api` – Account limits, credit costs, and endpoint inventory (no API credits)
 * `usage-api` – Current credit balance (no API credits)
-* `mcp-registry-api` – Search and browse the BuiltWith MCP registry of other remote MCP servers (no API credits)
+* `mcp-registry-api` – Search and browse the BuiltWith MCP registry (v1) of other remote MCP servers (no API credits)
+* `mcp-registry-v2-api` – Search and browse the BuiltWith MCP registry (v2) of other remote MCP servers, with per-endpoint auth flags and first/last detected dates (no API credits)
 * `vector-search` – Semantic similarity search across technologies and categories
 * `ask-api` – Natural language website list lookup (e.g. "Magento websites in Spain"); supports full reports and pagination
 * `payment-balance` – Check your API credit balance
