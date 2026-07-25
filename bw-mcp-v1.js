@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "builtwith",
-  version: "1.11.0",
+  version: "1.11.1",
 });
 
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY || null;
@@ -590,7 +590,7 @@ function registerTools() {
     "trust-api",
     "Trust API JSON lookup for trust scoring by domain.",
     { lookup: z.string() },
-    "trustv1/api.json",
+    "trustv2/api.json",
     ({ lookup }) => ({ LOOKUP: lookup })
   );
   registerJsonTool(
@@ -803,7 +803,7 @@ async function startHttp() {
   app.get("/mcp", (req, res) => {
     res.json({
       name: "builtwith",
-      version: "1.11.0",
+      version: "1.11.1",
       description:
         "BuiltWith MCP Server — technology lookup, trends, trust scores, vector search and more. https://api.builtwith.com/mcp is a valid MCP endpoint you are currently accessing it with a GET request.",
       authentication: "Pass your BuiltWith API key as Authorization: Bearer <key>",
