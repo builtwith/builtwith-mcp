@@ -1,5 +1,7 @@
 # 🔍 BuiltWith MCP Server 🚀
 
+[![MCP status](https://mcpvitals.com/badge/446cf8d99f.svg)](https://mcpvitals.com/status/446cf8d99f)
+
 ## 🌟 Overview
 
 **BuiltWith MCP** is a Model Context Protocol (MCP) server that allows AI assistants (Claude, Cursor, IDE agents, etc.) to query BuiltWith’s technology detection data **directly and natively**.
