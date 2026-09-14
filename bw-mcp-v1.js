@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "builtwith",
-  version: "1.11.1",
+  version: "1.12.0",
 });
 
 const BUILTWITH_API_KEY = process.env.BUILTWITH_API_KEY || null;
@@ -240,6 +240,7 @@ function extractTechnologies(data) {
     for (const tech of technologies) {
       if (!tech) continue;
       extracted.push({
+        confidence: tech.confidence,
         Name: tech.Name || "",
         Description: tech.Description || "",
         Tag: tech.Tag || "",
@@ -426,16 +427,16 @@ function registerPrompts() {
 function registerTools() {
   toolCatalog.push({
     name: "domain-lookup",
-    description: "Returns the live web technologies used on the root domain name.",
+    description: "Returns the live web technologies used on the root domain name, including v25 confidence scores.",
     parameters: { domain: "string", liveOnly: "boolean (optional)" },
   });
 
   server.tool(
     "domain-lookup",
-    "Returns the live web technologies used on the root domain name.",
+    "Returns the live web technologies used on the root domain name, including v25 confidence scores.",
     { domain: z.string(), liveOnly: z.boolean().optional() },
     async ({ domain, liveOnly }) => {
-      const result = await requestBuiltWithJson("v23/api.json", {
+      const result = await requestBuiltWithJson("v25/api.json", {
         LOOKUP: domain,
         LIVEONLY: liveOnly === false ? undefined : "yes",
       });
@@ -451,23 +452,16 @@ function registerTools() {
 
   registerJsonTool(
     "domain-api",
-    "Domain API JSON lookup for technology and metadata by domain.",
+    "Domain API v25 JSON lookup with technology confidence and company registration metadata.",
     { lookup: z.string() },
-    "v23/api.json",
+    "v25/api.json",
     ({ lookup }) => ({ LOOKUP: lookup })
   );
   registerJsonTool(
     "domain-api-json",
-    "Raw Domain API JSON lookup for technology and metadata by domain.",
+    "Raw Domain API v25 JSON lookup with technology confidence and company registration metadata.",
     { lookup: z.string() },
-    "v23/api.json",
-    ({ lookup }) => ({ LOOKUP: lookup })
-  );
-  registerJsonTool(
-    "domain-api-json",
-    "Raw Domain API JSON lookup for technology and metadata by domain.",
-    { lookup: z.string() },
-    "v22/api.json",
+    "v25/api.json",
     ({ lookup }) => ({ LOOKUP: lookup })
   );
   registerJsonTool(
@@ -803,7 +797,7 @@ async function startHttp() {
   app.get("/mcp", (req, res) => {
     res.json({
       name: "builtwith",
-      version: "1.11.1",
+      version: "1.12.0",
       description:
         "BuiltWith MCP Server — technology lookup, trends, trust scores, vector search and more. https://api.builtwith.com/mcp is a valid MCP endpoint you are currently accessing it with a GET request.",
       authentication: "Pass your BuiltWith API key as Authorization: Bearer <key>",
