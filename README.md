@@ -54,6 +54,25 @@ Authorization: Bearer YOUR_BUILTWITH_API_KEY
 
 ---
 
+## Python SDK integration
+
+The [official Python SDK](https://github.com/builtwith/builtwith-python) connects to
+this existing hosted MCP server. Install `pip install "builtwith-official[mcp]"`
+and set `BUILTWITH_API_KEY` in your environment:
+
+```python
+from builtwith_official.mcp import connect_mcp
+
+async def discover_tools() -> None:
+    async with connect_mcp() as session:
+        print(await session.list_tools())
+        # Uses API credits when invoked:
+        # result = await session.call_tool("domain-api", {"lookup": "example.com"})
+```
+
+The client uses the existing tool names and schemas; it does not run another server.
+See the [Python MCP guide](https://github.com/builtwith/builtwith-python/blob/main/docs/mcp.md).
+
 ## 🧩 Supported Tools
 
 The hosted MCP exposes the following tools:
