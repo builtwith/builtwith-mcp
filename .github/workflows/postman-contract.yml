@@ -1,0 +1,9 @@
+name: Check Postman API contracts
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  postman-contract:
+    uses: builtwith/builtwith/.github/workflows/postman-contract.yml@main
+    with:
+      release_ref: ${{ github.sha }}

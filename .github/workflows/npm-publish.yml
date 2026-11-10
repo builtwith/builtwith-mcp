@@ -11,7 +11,15 @@ on:
     types: [created]
 
 jobs:
+  postman-contract:
+    permissions:
+      contents: read
+    uses: builtwith/builtwith/.github/workflows/postman-contract.yml@main
+    with:
+      release_ref: ${{ inputs.release_ref || github.ref }}
+
   build:
+    needs: postman-contract
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
